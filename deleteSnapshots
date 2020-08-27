@@ -1,0 +1,53 @@
+from __future__ import print_function
+import boto3
+import logging
+import datetime
+from datetime import date
+import csv
+import re
+from collections import OrderedDict
+from pprint import pprint
+import boto3
+
+
+#parse AMI ID from snapshots
+def parse_description(description):
+    regex = r"^Created by CreateImage\((.*?)\) for (.*?) "
+    matches = re.finditer(regex, description, re.MULTILINE)
+    for matchNum, match in enumerate(matches):
+        return match.groups()
+    return '', ''
+    
+    
+#get list of images
+def get_images():
+    ec2 = boto3.resource('ec2', region_name='REGION')
+    my_images = ec2.images.filter(Owners=['OWNER_ID'])
+    image_ids =[]
+    for image in my_images:
+        image_ids.append(image.id)
+        
+    return image_ids
+        
+        
+
+def lambda_handler(event, context):
+    
+    client = boto3.client('ec2',region_name='REGION')
+    snapshots = client.describe_snapshots(OwnerIds=['OWNER_ID'])
+    
+    #Get IDs for all AMIs in env
+    image_ids = get_images()
+
+    #Get AMI IDs for all snapshots in env
+    for snapshot in snapshots['Snapshots']:
+        instance_id, ebs_image_id = parse_description(snapshot['Description'])
+
+        id = snapshot['SnapshotId']
+        #print(id + ":  " + ebs_image_id)
+        
+        #if AMI ID of snapshot doesn't exist
+        if ebs_image_id:
+            if ebs_image_id not in image_ids:
+                print("Removing snapshot " + ebs_image_id + "as it has no associated AMI")
+                client.delete_snapshot(SnapshotId=id)
