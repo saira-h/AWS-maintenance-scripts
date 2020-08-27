@@ -2,7 +2,7 @@
 
 This script cleans up AMIs and EC2s depending on a removal date in a "RemoveOn" tag that your resources must have. This will be in the format DD-MM-YYYY.
 
-# deleteSnapshots
+# DeleteSnapshots
 
 This script deletes snapshots with no AMI attached.
 
